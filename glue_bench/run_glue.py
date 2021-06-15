@@ -131,7 +131,7 @@ class DataTrainingArguments:
             raise ValueError("Need either a GLUE task or a training/validation file.")
         else:
             train_extension = self.train_file.split(".")[-1]
-            assert train_extension in ["csv", "json"], "`train_file` should be a csv or a json file."
+            assert train_extension in ["csv", "json", "jsonl"], "`train_file` should be a csv or a json file."
             validation_extension = self.validation_file.split(".")[-1]
             assert (
                 validation_extension == train_extension
@@ -326,6 +326,9 @@ def main():
         non_label_column_names = [name for name in datasets["train"].column_names if name != "label"]
         if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
             sentence1_key, sentence2_key = "sentence1", "sentence2"
+        elif "question" in non_label_column_names and "passage" in non_label_column_names:
+            sentence1_key, sentence2_key = "question", "passage"
+
         else:
             if len(non_label_column_names) >= 2:
                 sentence1_key, sentence2_key = non_label_column_names[:2]
