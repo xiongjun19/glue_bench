@@ -62,13 +62,6 @@ class WscModel(nn.Module):
         sequence_out = encoder_output['last_hidden_state']
         return sequence_out
 
-        # if compute_loss:
-        #     loss_fct = nn.CrossEntropyLoss()
-        #     loss = loss_fct(logits.view(-1, self.head.num_labels), batch.label_id.view(-1),)
-        #     return LogitsAndLossOutput(logits=logits, loss=loss, other=encoder_output.other)
-        # else:
-        #     return LogitsOutput(logits=logits, other=encoder_output.other)
-
 
 class WscHead(nn.Module):
     def __init__(self, hidden_dim, hidden_dropout, num_spans, cls_num):
@@ -97,6 +90,7 @@ class SelfAttSpanExtractor(nn.Module):
 
     def forward(self, enc_seq, spans):
         att_logits = self._global_att_linear(enc_seq)
+        # att_logits = self.dropout(att_logits)
         span_begins, span_ends = spans.split(1, dim=-1)
         raw_widths = span_ends - span_begins
         max_width = raw_widths.max().item() + 1

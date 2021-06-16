@@ -16,6 +16,7 @@ from torch.utils.data import dataloader
 from torch import nn
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
+from transformers import set_seed
 
 from tokenizer import PretrainedTokenizer
 from wsc_dataset import SpanWscDataset
@@ -34,6 +35,7 @@ class WscTrainer(object):
         config.cls_num = cls_num
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.config = config
+        set_seed(797)
         self.model = WscModel(config, device=self.device)
         self.model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
@@ -54,7 +56,7 @@ class WscTrainer(object):
             self.train_epoch(train_dl, optimizer, lr_scheduler, self.criterion, epoch)
             acc = self.evalute(val_dl)
             self.print_metric(False, epoch, acc, best_acc)
-            if acc > best_acc:
+            if acc >= best_acc:
                 best_acc = acc
                 torch.save(self.model, self.config.model_path)
             acc = self.evalute(train_dl)
@@ -70,6 +72,8 @@ class WscTrainer(object):
             logits = self.model(x, **batch)
             loss = criterion(logits, y)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(),
+                    self.config.max_norm)
             optimizer.step()
             lr_scheduler.step()
 
@@ -176,13 +180,13 @@ def get_args():
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--warm_up_ratio', type=float, default=0.1)
     parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--max_norm', type=float, default=10)
     parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--train_path', type=str, help='path to the train file')
     parser.add_argument('--valid_path', type=str, help='path to the valid file')
     parser.add_argument('--model_path', type=str, help='where to save the model')
     # parser.add_argument('--warm_up_ratio', type=float, default=0.1)
     # parser.add_argument('--warm_up_ratio', type=float, default=0.1)
-
     args = parser.parse_args()
     return args
 

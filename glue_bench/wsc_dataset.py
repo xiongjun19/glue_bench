@@ -104,7 +104,7 @@ class SpanWscDataset(DatasetMixin):
             "spans": torch.LongTensor(spans),
             "spans_width": torch.LongTensor(spans_width),
             "span_masks": torch.LongTensor(span_masks),
-            "pos_list": np.array(_dict["pos_list"]),
+            "pos_list": _dict["pos_list"]
         }
 
     @classmethod
