@@ -14,8 +14,9 @@ class WscModel(nn.Module):
         self.config = config
         self.encoder = self._init_encoder()
         self.cls_num = config.cls_num
-        self.head = WscHead(self.encoder.config.hidden_dim,
+        self.head = WscHead(self.encoder.config.hidden_size,
                             self.config.hidden_dropout, self.config.num_spans, self.cls_num)
+        self.device = kwargs["device"]
 
     def _init_encoder(self):
         pretrain_config = AutoConfig.from_pretrained(self.config.pretrain_name)
@@ -37,7 +38,7 @@ class WscModel(nn.Module):
             "span_masks": span_masks,
         }
         """
-        spans = kwargs["spans"], kwargs["spans_width"], kwargs["span_masks"]
+        spans = kwargs["spans"]
         attention_mask = kwargs["att_masks"]
         input_ids = x.to(self.device)
         spans = spans.to(self.device)
@@ -54,7 +55,7 @@ class WscModel(nn.Module):
         return logits
 
     def _get_enc(self, input_ids, spans, token_type_ids, attention_mask):
-        encoder_output = self.encoder.encode(
+        encoder_output = self.encoder(
             input_ids=input_ids, token_type_ids=token_type_ids,
             attention_mask=attention_mask
         )

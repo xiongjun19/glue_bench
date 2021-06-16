@@ -4,7 +4,7 @@
 this file is designed to run wsc bench mark
 """
 
-
+import os
 import argparse
 import math
 from tqdm import tqdm
@@ -34,13 +34,15 @@ class WscTrainer(object):
         config.cls_num = cls_num
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.config = config
-        self.model = WscModel(config)
+        self.model = WscModel(config, device=self.device)
         self.model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
         # self.writer = SummaryWriter(log_path)
         # self.metric_calcutor = self.create_metric_calculator()
 
     def train(self):
+        model_dir = os.path.dirname(self.config.model_path)
+        os.makedirs(model_dir, exist_ok=True)
         train_dl = self.get_dataloader(self.config.train_path, self.config.batch_size)
         val_dl = self.get_dataloader(self.config.valid_path, self.config.batch_size)
         optimizer = self.create_optimizer(self.config.weight_decay, self.config.lr)
@@ -50,7 +52,7 @@ class WscTrainer(object):
         best_acc = 0.
         for epoch in tqdm(range(epochs)):
             self.train_epoch(train_dl, optimizer, lr_scheduler, self.criterion, epoch)
-            acc = self.evalute(val_dl) 
+            acc = self.evalute(val_dl)
             self.print_metric(False, epoch, acc, best_acc)
             if acc > best_acc:
                 best_acc = acc
@@ -143,7 +145,7 @@ class WscTrainer(object):
         ds = SpanWscDataset(self.tokenizer, texts, spans, label_list)
         dl = dataloader.DataLoader(
                 ds, batch_size=batch_size,
-                num_workers=self.config.num_worker,
+                num_workers=self.config.num_workers,
                 pin_memory=True, shuffle=True,
                 collate_fn=lambda x: ds.collate(
                     x,

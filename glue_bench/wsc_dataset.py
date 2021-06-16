@@ -124,11 +124,11 @@ class SpanWscDataset(DatasetMixin):
 
     @classmethod
     def _pad_spans(cls, tags_arr, spans_arr, spans_width):
-        res_tags = tags_arr 
+        res_tags = tags_arr
         res_spans = []
         res_spans_width = []
         res_mask = []
-        tag_num_arr = [len(tags) for tags in tags_arr]
+        tag_num_arr = [len(spans) for spans in spans_width]
         max_tag = max(tag_num_arr)
         for tags, spans, width_arr, tag_num in zip(tags_arr, spans_arr, spans_width, tag_num_arr):
             tag_mask = [1] * tag_num
