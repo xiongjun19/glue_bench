@@ -2,6 +2,7 @@
 
 
 import torch
+import numpy as np
 from torch.utils.data.dataset import Dataset
 
 
@@ -29,7 +30,7 @@ class DatasetMixin(Dataset):
 
 class SpanWscDataset(DatasetMixin):
     def __init__(self, tokenizer, texts, spans_list, tags_list=None):
-        super(SpanNerDataset, self).__init__()
+        super(SpanWscDataset, self).__init__()
         self.tokenizer = tokenizer
         self.texts = texts
         self.spans_list = spans_list
@@ -74,7 +75,7 @@ class SpanWscDataset(DatasetMixin):
 
     @classmethod
     def collate(cls, batch, max_seq_len=512, padding_type="fix"):
-        _dict = collect_utils.list_dict2dict(batch)
+        _dict = list_dict2dict(batch)
         if padding_type == "dynamic":
             return cls._dynamic_pad(_dict, max_seq_len)
         return cls._fix_pad(_dict, max_seq_len)
@@ -123,7 +124,7 @@ class SpanWscDataset(DatasetMixin):
 
     @classmethod
     def _pad_spans(cls, tags_arr, spans_arr, spans_width):
-        res_tags = []
+        res_tags = tags_arr 
         res_spans = []
         res_spans_width = []
         res_mask = []
@@ -133,14 +134,27 @@ class SpanWscDataset(DatasetMixin):
             tag_mask = [1] * tag_num
             if tag_num < max_tag:
                 res_mask.append(tag_mask + [0] * (max_tag - tag_num))
-                res_tags.append(tags + [0] * (max_tag - tag_num))
                 res_spans_width.append(width_arr + [0] * (max_tag - tag_num))
                 tmp_spans = np.zeros([max_tag, 2], np.long)
                 tmp_spans[:tag_num, :] = spans
                 res_spans.append(tmp_spans)
             else:
-                res_tags.append(tags)
                 res_spans.append(spans)
                 res_spans_width.append(width_arr)
                 res_mask.append(tag_mask)
         return np.array(res_tags, dtype=np.long), np.array(res_spans, dtype=np.long), res_spans_width, res_mask
+
+
+def list_dict2dict(dict_list):
+    """
+    将一组dict依据其key，进行合并
+    :param dict_list:
+    :return:
+    """
+    res = dict()
+    for obj in dict_list:
+        for key, val in obj.items():
+            if key not in res:
+                res[key] = list()
+            res[key].append(val)
+    return res

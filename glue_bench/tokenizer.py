@@ -34,4 +34,3 @@ class PretrainedTokenizer(object):
             "pos_list": res["offset_mapping"],
         }
         return f_res
-

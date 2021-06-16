@@ -2,11 +2,9 @@
 
 import torch
 from torch import nn
-from typing import List, Union
 from transformers import (
     AutoConfig,
     AutoModel,
-    AutoTokenizer,
 )
 
 
@@ -17,7 +15,7 @@ class WscModel(nn.Module):
         self.encoder = self._init_encoder()
         self.cls_num = config.cls_num
         self.head = WscHead(self.encoder.config.hidden_dim,
-                self.config.hidden_dropout, num_spans, self.cls_num)
+                            self.config.hidden_dropout, self.config.num_spans, self.cls_num)
 
     def _init_encoder(self):
         pretrain_config = AutoConfig.from_pretrained(self.config.pretrain_name)
@@ -48,11 +46,11 @@ class WscModel(nn.Module):
         token_type_ids = torch.zeros_like(input_ids, device=self.device)
 
         sequence_out = self._get_enc(
-            input_ids, spans, spans_width,
+            input_ids, spans,
             token_type_ids=token_type_ids,
             attention_mask=attention_mask
         )
-        logits = self.head(sequence_out, spans=batch.spans)
+        logits = self.head(sequence_out, spans=spans)
         return logits
 
     def _get_enc(self, input_ids, spans, token_type_ids, attention_mask):
@@ -70,6 +68,7 @@ class WscModel(nn.Module):
         # else:
         #     return LogitsOutput(logits=logits, other=encoder_output.other)
 
+
 class WscHead(nn.Module):
     def __init__(self, hidden_dim, hidden_dropout, num_spans, cls_num):
         super(WscHead, self).__init__()
@@ -84,14 +83,14 @@ class WscHead(nn.Module):
     def forward(self, enc_seq, spans):
         span_emb = self.span_att_extractor(enc_seq, spans)
         span_emb = span_emb.view(-1, self.num_spans * self.hid_dim)
-        span_emb = self.dropout(sapn_emb)
+        span_emb = self.dropout(span_emb)
         logits = self.classifier(span_emb)
         return logits
 
 
 class SelfAttSpanExtractor(nn.Module):
     def __init__(self, hid_dim, dropout):
-        super(SelfAttExtractor, self).__init__()
+        super(SelfAttSpanExtractor, self).__init__()
         self.dropout = nn.Dropout(dropout)
         self._global_att_linear = nn.Linear(hid_dim, 1)
 
@@ -139,7 +138,7 @@ def get_device_of(tensor: torch.Tensor) -> int:
 
 
 def flatten_and_batch_shift_indices(indices, seq_len):
-    offsets = get_range(indices.shape[0], get_device_of(indices)) * seq_len
+    offsets = get_range_vector(indices.shape[0], get_device_of(indices)) * seq_len
     for _ in range(len(indices.shape) - 1):
         offsets = offsets.unsqueeze(1)
     res = indices + offsets 
@@ -150,12 +149,11 @@ def flatten_and_batch_shift_indices(indices, seq_len):
 def batched_index_select(target, indices, flattened_indices):
     """
         @param indices: [batch, dim1, ..., dim_n]
-        @param input_tensor: [batch, seq_len, hid_dim]
+        @param target: [batch, seq_len, hid_dim]
         @return: selected_tensor with shape [batch, dim1, ..., dim_n,  hid_dim]
     """
     if flattened_indices is None:
-        flattened_indices = flatten_and_batch_shift_indices(indices,
-                target.shape[1])
+        flattened_indices = flatten_and_batch_shift_indices(indices, target.shape[1])
     flat_target = target.view(-1, target.shape[-1])
     flat_selected = flat_target.index_select(0, flattened_indices)
     selected_shape = list(indices.shape) + [target.shape[-1]]
@@ -174,6 +172,7 @@ def masked_softmax(logits, mask, dim=-1):
     weight = weight * mask
     weight_sum = weight.sum(dim=dim, keepdim=True)
     return weight / (weight_sum + 1e-13)
+
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     """
