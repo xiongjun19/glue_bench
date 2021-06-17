@@ -10,4 +10,4 @@ accum_steps=2
 train_path="../data/wsc/train.jsonl"
 valid_path="../data/wsc/val.jsonl"
 
-python ../glue_bench/run_wsc.py --pretrain_name ${model_name} --hidden_dropout 0.2  --max_seq_len ${max_seq_len} --batch_size ${batch_size} --lr $lr --epochs ${epochs} --weight_decay 1e-5 --num_workers 4 --model_path ${out_dir} --train_path ${train_path} --valid_path ${valid_path}
+python ../glue_bench/run_wsc.py --pretrain_name ${model_name} --hidden_dropout 0.5  --max_seq_len ${max_seq_len} --batch_size ${batch_size} --lr $lr --epochs ${epochs} --weight_decay 1e-4 --num_workers 4 --model_path ${out_dir} --train_path ${train_path} --valid_path ${valid_path} --max_norm 2
